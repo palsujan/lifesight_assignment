@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Input } from "./InputData";
 import Dropdown from "./DropData";
 import { Button } from "./Button";
@@ -13,51 +13,84 @@ export const  DataTable =({ data }: any) => {
   const pageSize = 20;
 
 
-  const regions = [...new Set(data.map((d: any) => d.region))].map((r: any) => ({
-    label: r,
-    value: r,
-  }));
-  const regionOptions = [{ label: "All regions", value: "" }, ...regions];
-
-  const filtered = data.filter((row: any) => {
-    const channelMatch = row.channel
-      .toLowerCase()
-      .includes(channelFilter.toLowerCase());
-    const regionMatch = regionFilter ? row.region === regionFilter : true;
-    return channelMatch && regionMatch;
-  });
-
-  const sorted = [...filtered].sort((a, b) => {
-    const aVal = a[sortKey];
-    const bVal = b[sortKey];
-    const isNum = typeof aVal === "number";
-    const result = isNum ? aVal - bVal : String(aVal).localeCompare(String(bVal));
-    return sortDir === "asc" ? result : -result;
-  });
-
-
-  const start = (page - 1) * pageSize;
-  const paged = sorted.slice(start, start + pageSize);
-  const totalPages = Math.ceil(sorted.length / pageSize);
-  const totals = filtered.reduce(
-    (acc: any, row: any) => ({
-      spend: acc.spend + row.spend,
-      conversions: acc.conversions + row.conversions,
-      clicks: acc.clicks + row.clicks,
-      impressions: acc.impressions + row.impressions,
-    }),
-    { spend: 0, conversions: 0, clicks: 0, impressions: 0 }
+  const regions = useMemo(
+    () =>
+      [...new Set(data.map((d: any) => d.region))].map((r: any) => ({
+        label: r,
+        value: r,
+      })),
+    [data]
   );
-  const ctr = totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
 
-  const handleSort = (key: any) => {
-    if (sortKey === key) {
-      setSortDir(sortDir === "asc" ? "desc" : "asc");
-    } else {
-      setSortKey(key);
-      setSortDir("asc");
-    }
-  };
+  const regionOptions = useMemo(() => [{ label: "All regions", value: "" }, ...regions], [regions]);
+
+  const filtered = useMemo(() => {
+    return data.filter((row: any) => {
+      const channelMatch = row.channel
+        .toLowerCase()
+        .includes(channelFilter.toLowerCase());
+      const regionMatch = regionFilter ? row.region === regionFilter : true;
+      return channelMatch && regionMatch;
+    });
+  }, [data, channelFilter, regionFilter]);
+
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const aVal = a[sortKey];
+      const bVal = b[sortKey];
+      const isNum = typeof aVal === "number";
+      const result = isNum ? aVal - bVal : String(aVal).localeCompare(String(bVal));
+      return sortDir === "asc" ? result : -result;
+    });
+  }, [filtered, sortKey, sortDir]);
+
+  const totalPages = useMemo(() => Math.ceil(sorted.length / pageSize), [sorted.length, pageSize]);
+  const start = useMemo(() => (page - 1) * pageSize, [page, pageSize]);
+  const paged = useMemo(() => sorted.slice(start, start + pageSize), [sorted, start, pageSize]);
+
+  const totals = useMemo(
+    () =>
+      filtered.reduce(
+        (acc: any, row: any) => ({
+          spend: acc.spend + row.spend,
+          conversions: acc.conversions + row.conversions,
+          clicks: acc.clicks + row.clicks,
+          impressions: acc.impressions + row.impressions,
+        }),
+        { spend: 0, conversions: 0, clicks: 0, impressions: 0 }
+      ),
+    [filtered]
+  );
+
+  const ctr = useMemo(() => (totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0), [totals]);
+
+  const handleSort = useCallback(
+    (key: any) => {
+      if (sortKey === key) {
+        setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+      } else {
+        setSortKey(key);
+        setSortDir("asc");
+      }
+    },
+    [sortKey]
+  );
+
+  const handleChannelChange = useCallback((e: any) => {
+    setChannelFilter(e.target.value);
+    setPage(1);
+  }, []);
+
+  const handleRegionChange = useCallback((val: any) => {
+    setRegionFilter(val);
+    setPage(1);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setChannelFilter("");
+    setRegionFilter("");
+    setPage(1);
+  }, []);
 
   return (
     <div className="ls-container">
@@ -67,17 +100,12 @@ export const  DataTable =({ data }: any) => {
           placeholder="e.g. TikTok"
           value={channelFilter}
           error=""
-          onChange={(e: any) => {
-            setChannelFilter(e.target.value);
-            setPage(1);
-          }}
+          onChange={handleChannelChange}
         />
         <Button
           variant="secondary"
           onClick={() => {
-            setChannelFilter("");
-            setRegionFilter("");
-            setPage(1);
+            handleClearFilters();
           }}
         >
           Clear filters
@@ -103,10 +131,7 @@ export const  DataTable =({ data }: any) => {
                   <Dropdown
                     options={regionOptions}
                     value={regionFilter}
-                    onChange={(val: any) => {
-                      setRegionFilter(val);
-                      setPage(1);
-                    }}
+                    onChange={handleRegionChange}
                     placeholder="All regions"
                   />
                 </div>
@@ -120,7 +145,9 @@ export const  DataTable =({ data }: any) => {
         </thead>
         <tbody>
           {paged.map((row) => (
-            <tr key={row.id}>
+            <tr
+              key={row.id ?? `${row.channel}-${row.region}-${row.impressions}-${row.clicks}`}
+            >
               <td>{row.id}</td>
               <td>{row.channel}</td>
               <td>{row.region}</td>
@@ -142,13 +169,13 @@ export const  DataTable =({ data }: any) => {
         <span>
           Page {page} of {totalPages || 1}
         </span>
-        <Button variant="secondary" disabled={page === 1} onClick={() => setPage(page - 1)}>
+        <Button variant="secondary" disabled={page === 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
           Prev
         </Button>
         <Button
           variant="secondary"
           disabled={page === totalPages || totalPages === 0}
-          onClick={() => setPage(page + 1)}
+          onClick={() => setPage((p) => Math.min(totalPages || 1, p + 1))}
         >
           Next
         </Button>

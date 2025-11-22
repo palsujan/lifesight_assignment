@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 
  const Dropdown = ({ label, options, value, onChange, placeholder }: any) => {
   const [open, setOpen] = useState(false);
@@ -31,4 +31,4 @@ import { useState } from "react";
     </div>
   );
 }
-export default Dropdown;
+export default React.memo(Dropdown);
