@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const Dropdown = ({ label, options, value, onChange, placeholder }: any) => {
+ const Dropdown = ({ label, options, value, onChange, placeholder }: any) => {
   const [open, setOpen] = useState(false);
 
   const selected = options.find((opt: any) => opt.value === value)?.label || placeholder;
@@ -31,3 +31,4 @@ const Dropdown = ({ label, options, value, onChange, placeholder }: any) => {
     </div>
   );
 }
+export default Dropdown;

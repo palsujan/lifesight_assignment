@@ -6,12 +6,18 @@ export default function App() {
     <div className="ls-page">
       <header className="ls-header">
         <div className="ls-brand">
-          <h1>marketing Dashboard</h1>
+          <h1>Marketing Dashboard</h1>
 
         </div>
       </header>
 
       <main className="ls-main">
+        <div className="ls-debug" style={{ marginBottom: 12, textAlign: "left" }}>
+          <strong>Debug:</strong> rows = {Array.isArray(rawData) ? rawData.length : 0}
+          <pre style={{ maxHeight: 120, overflow: "auto", background: "#f8fafc", padding: 8 }}>
+            {JSON.stringify(Array.isArray(rawData) && rawData.length ? rawData[0] : {}, null, 2)}
+          </pre>
+        </div>
         <DataTable data={rawData} />
       </main>
 

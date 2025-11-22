@@ -3,7 +3,7 @@ import { Input } from "./InputData";
 import Dropdown from "./DropData";
 import { Button } from "./Button";
 
-export const DataTable = ({ data }: any) => {
+export const  DataTable =({ data }: any) => {
   const [page, setPage] = useState(1);
   const [channelFilter, setChannelFilter] = useState("");
   const [regionFilter, setRegionFilter] = useState("");
@@ -39,7 +39,6 @@ export const DataTable = ({ data }: any) => {
   const start = (page - 1) * pageSize;
   const paged = sorted.slice(start, start + pageSize);
   const totalPages = Math.ceil(sorted.length / pageSize);
-  
   const totals = filtered.reduce(
     (acc: any, row: any) => ({
       spend: acc.spend + row.spend,
